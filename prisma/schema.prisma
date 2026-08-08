@@ -1,0 +1,178 @@
+generator client { provider = "prisma-client-js" }
+
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum Rol { ADMINISTRADOR DIRECTOR PROFESOR ESTUDIANTE ACUDIENTE }
+enum EstadoUsuario { ACTIVO INACTIVO }
+enum EstadoMatricula { ACTIVA RETIRADA FINALIZADA }
+enum EstadoAsistencia { PRESENTE AUSENTE TARDE JUSTIFICADO }
+enum EstadoPago { PENDIENTE PARCIAL PAGADO ANULADO }
+
+model Usuario {
+ id String @id @default(cuid())
+ nombre String
+ email String @unique
+ passwordHash String
+ rol Rol
+ estado EstadoUsuario @default(ACTIVO)
+ creadoEn DateTime @default(now())
+ actualizadoEn DateTime @updatedAt
+ profesor Profesor?
+ estudiante Estudiante?
+ acudiente Acudiente?
+}
+
+model Acudiente {
+ id String @id @default(cuid())
+ usuarioId String @unique
+ documento String @unique
+ telefono String?
+ direccion String?
+ usuario Usuario @relation(fields:[usuarioId], references:[id], onDelete:Cascade)
+ estudiantes EstudianteAcudiente[]
+}
+
+model Profesor {
+ id String @id @default(cuid())
+ usuarioId String @unique
+ documento String @unique
+ telefono String?
+ usuario Usuario @relation(fields:[usuarioId], references:[id], onDelete:Cascade)
+ asignaciones Asignacion[]
+}
+
+model Estudiante {
+ id String @id @default(cuid())
+ usuarioId String? @unique
+ documento String @unique
+ nombres String
+ apellidos String
+ fechaNacimiento DateTime?
+ telefono String?
+ direccion String?
+ usuario Usuario? @relation(fields:[usuarioId], references:[id], onDelete:SetNull)
+ matriculas Matricula[]
+ acudientes EstudianteAcudiente[]
+ asistencias Asistencia[]
+ calificaciones Calificacion[]
+ pagos Pago[]
+}
+
+model EstudianteAcudiente {
+ estudianteId String
+ acudienteId String
+ parentesco String
+ estudiante Estudiante @relation(fields:[estudianteId], references:[id], onDelete:Cascade)
+ acudiente Acudiente @relation(fields:[acudienteId], references:[id], onDelete:Cascade)
+ @@id([estudianteId, acudienteId])
+}
+
+model Grado {
+ id String @id @default(cuid())
+ nombre String @unique
+ nivel String?
+ grupos Grupo[]
+}
+
+model Grupo {
+ id String @id @default(cuid())
+ nombre String
+ gradoId String
+ anio Int
+ grado Grado @relation(fields:[gradoId], references:[id], onDelete:Cascade)
+ matriculas Matricula[]
+ asignaciones Asignacion[]
+ @@unique([nombre, gradoId, anio])
+}
+
+model Matricula {
+ id String @id @default(cuid())
+ estudianteId String
+ grupoId String
+ estado EstadoMatricula @default(ACTIVA)
+ fecha DateTime @default(now())
+ estudiante Estudiante @relation(fields:[estudianteId], references:[id], onDelete:Cascade)
+ grupo Grupo @relation(fields:[grupoId], references:[id])
+ @@unique([estudianteId, grupoId])
+}
+
+model Materia {
+ id String @id @default(cuid())
+ nombre String @unique
+ codigo String? @unique
+ asignaciones Asignacion[]
+ calificaciones Calificacion[]
+}
+
+model Asignacion {
+ id String @id @default(cuid())
+ profesorId String
+ materiaId String
+ grupoId String
+ profesor Profesor @relation(fields:[profesorId], references:[id], onDelete:Cascade)
+ materia Materia @relation(fields:[materiaId], references:[id])
+ grupo Grupo @relation(fields:[grupoId], references:[id])
+ @@unique([profesorId, materiaId, grupoId])
+}
+
+model Periodo {
+ id String @id @default(cuid())
+ numero Int
+ anio Int
+ fechaInicio DateTime
+ fechaFin DateTime
+ calificaciones Calificacion[]
+ @@unique([numero, anio])
+}
+
+model Calificacion {
+ id String @id @default(cuid())
+ estudianteId String
+ materiaId String
+ periodoId String
+ nota Decimal @db.Decimal(3,2)
+ observacion String?
+ estudiante Estudiante @relation(fields:[estudianteId], references:[id], onDelete:Cascade)
+ materia Materia @relation(fields:[materiaId], references:[id])
+ periodo Periodo @relation(fields:[periodoId], references:[id])
+ @@unique([estudianteId, materiaId, periodoId])
+}
+
+model Asistencia {
+ id String @id @default(cuid())
+ estudianteId String
+ fecha DateTime
+ estado EstadoAsistencia
+ observacion String?
+ estudiante Estudiante @relation(fields:[estudianteId], references:[id], onDelete:Cascade)
+ @@unique([estudianteId, fecha])
+}
+
+model ConceptoPago {
+ id String @id @default(cuid())
+ nombre String @unique
+ valor Decimal @db.Decimal(12,2)
+ pagos Pago[]
+}
+
+model Pago {
+ id String @id @default(cuid())
+ estudianteId String
+ conceptoId String
+ valor Decimal @db.Decimal(12,2)
+ pagado Decimal @db.Decimal(12,2) @default(0)
+ estado EstadoPago @default(PENDIENTE)
+ fecha DateTime @default(now())
+ referencia String? @unique
+ estudiante Estudiante @relation(fields:[estudianteId], references:[id], onDelete:Cascade)
+ concepto ConceptoPago @relation(fields:[conceptoId], references:[id])
+ recibo Recibo?
+}
+
+model Recibo {
+ id String @id @default(cuid())
+ pagoId String @unique
+ numero String @unique
+ creadoEn DateTime @default(now())
+ pago Pago @relation(fields:[pagoId], references:[id], onDelete:Cascade)
+}
