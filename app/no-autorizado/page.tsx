@@ -1,0 +1,1 @@
+export default function NoAutorizado(){return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',fontFamily:'system-ui',background:'#f5f7fb'}}><div style={{textAlign:'center'}}><h1>Acceso no autorizado</h1><p>No tienes permisos para acceder a este recurso.</p><a href="/">Volver al inicio</a></div></main>}
